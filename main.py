@@ -18,454 +18,358 @@ from utils.stats import (
 )
 from utils.chart_utils import create_category_pie_chart, create_monthly_trend_chart
 
-# Set appearance mode and default color theme
-ctk.set_appearance_mode("dark")  # Modes: "System", "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue", "green", "dark-blue"
+# --- Theme Configuration ---
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
+
+# Colors
+COLOR_BG_MAIN = "#1a1a1a"
+COLOR_SIDEBAR = "#242424"
+COLOR_CARD = "#2b2b2b"
+COLOR_PRIMARY = "#1f6aa5"
+COLOR_TEXT_MAIN = "#ffffff"
+COLOR_TEXT_SUB = "#aaaaaa"
+FONT_FAMILY = "Segoe UI" # Windows standard, falls back gracefully
 
 class ExpenseTrackerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # Configure window
-        self.title("Personal Expense Tracker")
-        self.geometry("1200x700")
-        
-        # Configure grid layout (2x1)
+        self.title("ExpenseTracker | Pro")
+        self.geometry("1400x850")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Create sidebar frame with widgets
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(6, weight=1)
+        # Fonts
+        self.font_header = ctk.CTkFont(family=FONT_FAMILY, size=28, weight="bold")
+        self.font_subheader = ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold")
+        self.font_normal = ctk.CTkFont(family=FONT_FAMILY, size=14)
+        self.font_small = ctk.CTkFont(family=FONT_FAMILY, size=12)
+        self.font_stat_val = ctk.CTkFont(family=FONT_FAMILY, size=32, weight="bold")
+        self.font_stat_label = ctk.CTkFont(family=FONT_FAMILY, size=14)
 
-        # Sidebar - Logo/Title
-        self.logo_label = ctk.CTkLabel(
-            self.sidebar_frame, 
-            text="💰 Expense Tracker", 
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        # Create Sidebar
+        self.sidebar_frame = ctk.CTkFrame(self, width=240, corner_radius=0, fg_color=COLOR_SIDEBAR)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(8, weight=1)
 
-        # Sidebar - Navigation Buttons
-        self.dashboard_button = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Dashboard",
-            command=self.show_dashboard
-        )
-        self.dashboard_button.grid(row=1, column=0, padx=20, pady=10)
+        self.buttons = {}
+        self._create_sidebar()
 
-        self.add_expense_button = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Add Expense",
-            command=self.show_add_expense
-        )
-        self.add_expense_button.grid(row=2, column=0, padx=20, pady=10)
-
-        self.view_expenses_button = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="View Expenses",
-            command=self.show_view_expenses
-        )
-        self.view_expenses_button.grid(row=3, column=0, padx=20, pady=10)
-
-        self.export_button = ctk.CTkButton(
-            self.sidebar_frame, 
-            text="Export Data",
-            command=self.export_data
-        )
-        self.export_button.grid(row=4, column=0, padx=20, pady=10)
-
-        # Sidebar - Theme Toggle
-        self.appearance_mode_label = ctk.CTkLabel(
-            self.sidebar_frame, 
-            text="Appearance Mode:", 
-            anchor="w"
-        )
-        self.appearance_mode_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-        
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(
-            self.sidebar_frame, 
-            values=["Dark", "Light", "System"],
-            command=self.change_appearance_mode_event
-        )
-        self.appearance_mode_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
-
-        # Create main content frame
-        self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        # Create Main Content Area
+        self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color=COLOR_BG_MAIN)
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_rowconfigure(0, weight=1)
 
-        # Initialize with dashboard
+        # Initialize
         self.current_view = None
+
         self.show_dashboard()
 
+    def _create_sidebar(self):
+        # Logo
+        self.logo_label = ctk.CTkLabel(
+            self.sidebar_frame, 
+            text="💰 ExpenseTracker", 
+            font=ctk.CTkFont(family=FONT_FAMILY, size=22, weight="bold")
+        )
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(40, 30), sticky="ew")
+
+        # Navigation
+        self._add_nav_button("Dashboard", "📊", self.show_dashboard, 1)
+        self._add_nav_button("New Expense", "➕", self.show_add_expense, 2)
+        self._add_nav_button("Transactions", "📝", self.show_view_expenses, 3)
+        self._add_nav_button("Export Data", "📤", self.export_data, 4)
+
+        # Appearance Mode
+        self.appearance_mode_label = ctk.CTkLabel(
+            self.sidebar_frame, 
+            text="Theme:", 
+            anchor="w",
+            font=self.font_small,
+            text_color=COLOR_TEXT_SUB
+        )
+        self.appearance_mode_label.grid(row=9, column=0, padx=20, pady=(10, 0), sticky="w")
+        
+        self.appearance_mode_menu = ctk.CTkOptionMenu(
+            self.sidebar_frame, 
+            values=["Dark", "Light", "System"],
+            command=self.change_appearance_mode_event,
+            font=self.font_small,
+            fg_color=COLOR_CARD
+        )
+        self.appearance_mode_menu.grid(row=10, column=0, padx=20, pady=(5, 30), sticky="ew")
+        self.appearance_mode_menu.set("Dark")
+
+    def _add_nav_button(self, text, icon, command, row):
+        btn = ctk.CTkButton(
+            self.sidebar_frame,
+            corner_radius=8,
+            height=45,
+            border_spacing=10,
+            text=f"{icon}  {text}",
+            fg_color="transparent",
+            text_color=COLOR_TEXT_SUB,
+            hover_color=("gray70", "gray30"),
+            anchor="w",
+            command=lambda: self._handle_nav(command, text),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold")
+        )
+        btn.grid(row=row, column=0, sticky="ew", padx=15, pady=5)
+        self.buttons[text] = btn
+
+    def _handle_nav(self, command, name):
+        # Reset all buttons
+        for btn_name, btn in self.buttons.items():
+            btn.configure(fg_color="transparent", text_color=COLOR_TEXT_SUB)
+        
+        # Highlight active
+        self.buttons[name].configure(fg_color=COLOR_PRIMARY, text_color="white")
+        command()
+
     def clear_main_frame(self):
-        """Clear all widgets from main frame"""
         for widget in self.main_frame.winfo_children():
             widget.destroy()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
-        """Change the appearance mode"""
         ctk.set_appearance_mode(new_appearance_mode)
 
+    # --- VIEWS ---
+
     def show_dashboard(self):
-        """Display the dashboard with statistics and charts"""
-        if self.current_view == "dashboard":
-            return
-        
+        if self.current_view == "dashboard": return
         self.current_view = "dashboard"
         self.clear_main_frame()
+        self.buttons["Dashboard"].configure(fg_color=COLOR_PRIMARY, text_color="white") # Ensure highlight on init
 
-        # Title
-        title = ctk.CTkLabel(
-            self.main_frame, 
-            text="Dashboard", 
-            font=ctk.CTkFont(size=28, weight="bold")
-        )
-        title.grid(row=0, column=0, columnspan=3, padx=20, pady=(0, 20), sticky="w")
+        # Container
+        content = ctk.CTkScrollableFrame(self.main_frame, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=30, pady=30)
+        
+        # Header
+        ctk.CTkLabel(content, text="Dashboard Overview", font=self.font_header).pack(anchor="w", pady=(0, 20))
 
-        # Load expenses
         expenses = load_expenses()
 
-        # Statistics Cards Frame
-        stats_frame = ctk.CTkFrame(self.main_frame)
-        stats_frame.grid(row=1, column=0, columnspan=3, padx=20, pady=10, sticky="ew")
-        stats_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        # Stats Row
+        stats_container = ctk.CTkFrame(content, fg_color="transparent")
+        stats_container.pack(fill="x", pady=(0, 30))
+        stats_container.grid_columnconfigure((0, 1, 2), weight=1)
 
-        # Card 1: Total Spending
-        total_spending = get_total_spending(expenses)
-        card1 = ctk.CTkFrame(stats_frame, corner_radius=10)
-        card1.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            card1, 
-            text="Total Spending", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(15, 5))
-        
-        ctk.CTkLabel(
-            card1, 
-            text=f"${total_spending:.2f}", 
-            font=ctk.CTkFont(size=24, weight="bold")
-        ).pack(pady=(0, 15))
+        self._create_stat_card(stats_container, 0, "Total Spending", f"${get_total_spending(expenses):.2f}", "💵")
+        self._create_stat_card(stats_container, 1, "Total Transactions", str(get_expense_count(expenses)), "🧾")
+        self._create_stat_card(stats_container, 2, "Top Category", get_highest_spending_category(expenses), "🔥")
 
-        # Card 2: Number of Expenses
-        expense_count = get_expense_count(expenses)
-        card2 = ctk.CTkFrame(stats_frame, corner_radius=10)
-        card2.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            card2, 
-            text="Total Expenses", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(15, 5))
-        
-        ctk.CTkLabel(
-            card2, 
-            text=str(expense_count), 
-            font=ctk.CTkFont(size=24, weight="bold")
-        ).pack(pady=(0, 15))
-
-        # Card 3: Highest Category
-        highest_category = get_highest_spending_category(expenses)
-        card3 = ctk.CTkFrame(stats_frame, corner_radius=10)
-        card3.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            card3, 
-            text="Top Category", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(15, 5))
-        
-        ctk.CTkLabel(
-            card3, 
-            text=highest_category, 
-            font=ctk.CTkFont(size=24, weight="bold")
-        ).pack(pady=(0, 15))
-
-        # Charts Frame
-        charts_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        charts_frame.grid(row=2, column=0, columnspan=3, padx=20, pady=10, sticky="nsew")
-        charts_frame.grid_columnconfigure((0, 1), weight=1)
-        charts_frame.grid_rowconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure(2, weight=1)
+        # Charts Section
+        charts_container = ctk.CTkFrame(content, fg_color="transparent")
+        charts_container.pack(fill="both", expand=True)
+        charts_container.grid_columnconfigure((0, 1), weight=1)
+        charts_container.grid_rowconfigure(0, weight=1)
 
         # Pie Chart
-        pie_frame = ctk.CTkFrame(charts_frame, corner_radius=10)
-        pie_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        pie_card = ctk.CTkFrame(charts_container, fg_color=COLOR_CARD, corner_radius=15)
+        pie_card.grid(row=0, column=0, sticky="nsew", padx=(0, 15), pady=10)
+        ctk.CTkLabel(pie_card, text="Distribution by Category", font=self.font_subheader).pack(pady=15)
         
-        ctk.CTkLabel(
-            pie_frame, 
-            text="Category Distribution", 
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
-
         category_data = get_category_breakdown(expenses)
         if category_data:
-            pie_widget = create_category_pie_chart(pie_frame, category_data)
-            if pie_widget:
-                pie_widget.pack(fill="both", expand=True, padx=10, pady=10)
+            chart = create_category_pie_chart(pie_card, category_data)
+            chart.pack(fill="both", expand=True, padx=10, pady=10)
         else:
-            ctk.CTkLabel(pie_frame, text="No data available").pack(pady=20)
+            ctk.CTkLabel(pie_card, text="No data available", font=self.font_normal, text_color="gray").pack(expand=True)
 
         # Line Chart
-        line_frame = ctk.CTkFrame(charts_frame, corner_radius=10)
-        line_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
-        
-        ctk.CTkLabel(
-            line_frame, 
-            text="Monthly Trend", 
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
+        line_card = ctk.CTkFrame(charts_container, fg_color=COLOR_CARD, corner_radius=15)
+        line_card.grid(row=0, column=1, sticky="nsew", padx=(15, 0), pady=10)
+        ctk.CTkLabel(line_card, text="Spending Trend", font=self.font_subheader).pack(pady=15)
 
         monthly_data = get_monthly_spending(expenses)
         if monthly_data:
-            line_widget = create_monthly_trend_chart(line_frame, monthly_data)
-            if line_widget:
-                line_widget.pack(fill="both", expand=True, padx=10, pady=10)
+            chart = create_monthly_trend_chart(line_card, monthly_data)
+            chart.pack(fill="both", expand=True, padx=10, pady=10)
         else:
-            ctk.CTkLabel(line_frame, text="No data available").pack(pady=20)
+            ctk.CTkLabel(line_card, text="No data available", font=self.font_normal, text_color="gray").pack(expand=True)
+
+    def _create_stat_card(self, parent, col, title, value, icon):
+        card = ctk.CTkFrame(parent, fg_color=COLOR_CARD, corner_radius=15, height=140)
+        card.grid(row=0, column=col, sticky="ew", padx=10 if col==1 else 0)
+        
+        # Prevent shrinking
+        card.grid_propagate(False) 
+        
+        ctk.CTkLabel(card, text=title, font=self.font_stat_label, text_color=COLOR_TEXT_SUB).pack(pady=(20, 5), padx=20, anchor="w")
+        ctk.CTkLabel(card, text=value, font=self.font_stat_val, text_color=COLOR_TEXT_MAIN).pack(pady=(0, 5), padx=20, anchor="w")
+        # Icon watermark (optional)
+        icon_lbl = ctk.CTkLabel(card, text=icon, font=ctk.CTkFont(size=40))
+        icon_lbl.place(relx=0.9, rely=0.5, anchor="e")
 
     def show_add_expense(self):
-        """Display the add expense form"""
-        if self.current_view == "add_expense":
-            return
-        
+        if self.current_view == "add_expense": return
         self.current_view = "add_expense"
         self.clear_main_frame()
+        self.buttons["New Expense"].configure(fg_color=COLOR_PRIMARY, text_color="white")
 
-        # Title
-        title = ctk.CTkLabel(
-            self.main_frame, 
-            text="Add New Expense", 
-            font=ctk.CTkFont(size=28, weight="bold")
-        )
-        title.pack(pady=(0, 30))
+        # Center Container
+        center_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        center_frame.pack(expand=True, fill="both", padx=100, pady=50)
 
-        # Form Frame
-        form_frame = ctk.CTkFrame(self.main_frame, corner_radius=10)
-        form_frame.pack(padx=100, pady=20, fill="both", expand=True)
+        card = ctk.CTkFrame(center_frame, fg_color=COLOR_CARD, corner_radius=20)
+        card.pack(fill="both", expand=True, padx=50, pady=20)
 
-        # Amount
-        ctk.CTkLabel(
-            form_frame, 
-            text="Amount ($):", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(20, 5), anchor="w", padx=40)
+        # Form Content
+        form_scroll = ctk.CTkScrollableFrame(card, fg_color="transparent")
+        form_scroll.pack(fill="both", expand=True, padx=40, pady=40)
+
+        ctk.CTkLabel(form_scroll, text="Add New Expense", font=self.font_header).pack(pady=(0, 30), anchor="w")
+
+        # Fields
+        self._create_form_entry(form_scroll, "Amount ($)", "amount_entry", "0.00")
+        self._create_form_dropdown(form_scroll, "Category", "category_var", ["Food", "Transport", "Bills", "Entertainment", "Shopping", "Health", "Misc"])
         
-        self.amount_entry = ctk.CTkEntry(
-            form_frame, 
-            placeholder_text="0.00",
-            height=40,
-            font=ctk.CTkFont(size=14)
-        )
-        self.amount_entry.pack(pady=(0, 15), padx=40, fill="x")
-
-        # Category
-        ctk.CTkLabel(
-            form_frame, 
-            text="Category:", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(10, 5), anchor="w", padx=40)
-        
-        self.category_var = ctk.StringVar(value="Food")
-        self.category_menu = ctk.CTkOptionMenu(
-            form_frame,
-            values=["Food", "Transport", "Bills", "Entertainment", "Shopping", "Health", "Misc"],
-            variable=self.category_var,
-            height=40,
-            font=ctk.CTkFont(size=14)
-        )
-        self.category_menu.pack(pady=(0, 15), padx=40, fill="x")
-
-        # Date
-        ctk.CTkLabel(
-            form_frame, 
-            text="Date:", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(10, 5), anchor="w", padx=40)
-        
+        # Date (Special case)
+        ctk.CTkLabel(form_scroll, text="Date", font=self.font_normal, text_color=COLOR_TEXT_SUB).pack(pady=(10, 5), anchor="w")
         self.date_entry = DateEntry(
-            form_frame,
-            width=12,
-            background='darkblue',
-            foreground='white',
-            borderwidth=2,
-            date_pattern='yyyy-mm-dd'
+            form_scroll, width=12, background='#2b2b2b', foreground='white', 
+            borderwidth=0, date_pattern='yyyy-mm-dd', font=('Arial', 12)
         )
-        self.date_entry.pack(pady=(0, 15), padx=40, fill="x")
+        self.date_entry.pack(fill="x", pady=(0, 20), ipady=5)
 
-        # Description
-        ctk.CTkLabel(
-            form_frame, 
-            text="Description:", 
-            font=ctk.CTkFont(size=14)
-        ).pack(pady=(10, 5), anchor="w", padx=40)
-        
-        self.description_entry = ctk.CTkEntry(
-            form_frame,
-            placeholder_text="Optional description",
-            height=40,
-            font=ctk.CTkFont(size=14)
-        )
-        self.description_entry.pack(pady=(0, 20), padx=40, fill="x")
+        self._create_form_entry(form_scroll, "Description", "description_entry", "What was this for?")
 
-        # Submit Button
-        submit_button = ctk.CTkButton(
-            form_frame,
-            text="Add Expense",
-            command=self.submit_expense,
-            height=45,
-            font=ctk.CTkFont(size=16, weight="bold")
+        # Buttons
+        btn_frame = ctk.CTkFrame(form_scroll, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=20)
+
+        ctk.CTkButton(
+            btn_frame, text="Save Expense", height=50, 
+            font=ctk.CTkFont(size=16, weight="bold"),
+            fg_color=COLOR_PRIMARY, hover_color="#144870",
+            command=self.submit_expense
+        ).pack(fill="x")
+
+    def _create_form_entry(self, parent, label, attr_name, placeholder):
+        ctk.CTkLabel(parent, text=label, font=self.font_normal, text_color=COLOR_TEXT_SUB).pack(pady=(10, 5), anchor="w")
+        entry = ctk.CTkEntry(
+            parent, placeholder_text=placeholder, height=45, border_width=0,
+            fg_color="#3a3a3a", text_color="white", placeholder_text_color="#666666",
+            font=self.font_normal
         )
-        submit_button.pack(pady=(10, 30), padx=40, fill="x")
+        entry.pack(fill="x", pady=(0, 15))
+        setattr(self, attr_name, entry)
+
+    def _create_form_dropdown(self, parent, label, attr_name, values):
+        ctk.CTkLabel(parent, text=label, font=self.font_normal, text_color=COLOR_TEXT_SUB).pack(pady=(10, 5), anchor="w")
+        var = ctk.StringVar(value=values[0])
+        menu = ctk.CTkOptionMenu(
+            parent, variable=var, values=values, height=45,
+            fg_color="#3a3a3a", button_color=COLOR_PRIMARY,
+            button_hover_color="#144870", text_color="white",
+            font=self.font_normal
+        )
+        menu.pack(fill="x", pady=(0, 15))
+        setattr(self, attr_name, var)
 
     def submit_expense(self):
-        """Handle expense submission"""
         try:
-            amount = float(self.amount_entry.get())
-            if amount <= 0:
-                raise ValueError("Amount must be positive")
+            val = self.amount_entry.get()
+            if not val: raise ValueError
+            amount = float(val)
+            if amount <= 0: raise ValueError
         except ValueError:
-            messagebox.showerror("Error", "Please enter a valid positive amount")
+            messagebox.showerror("Invalid Input", "Please enter a valid positive amount.")
             return
-
-        category = self.category_var.get()
-        date = self.date_entry.get_date().strftime("%Y-%m-%d")
-        description = self.description_entry.get()
 
         expense = {
             "amount": amount,
-            "category": category,
-            "date": date,
-            "description": description,
+            "category": self.category_var.get(),
+            "date": self.date_entry.get_date().strftime("%Y-%m-%d"),
+            "description": self.description_entry.get(),
             "timestamp": datetime.now().isoformat()
         }
 
         if add_expense(expense):
-            messagebox.showinfo("Success", "Expense added successfully!")
-            # Clear form
+            messagebox.showinfo("Success", "Expense saved successfully!")
             self.amount_entry.delete(0, 'end')
             self.description_entry.delete(0, 'end')
-            self.date_entry.set_date(datetime.now())
         else:
-            messagebox.showerror("Error", "Failed to save expense")
+            messagebox.showerror("Error", "Could not save expense.")
 
     def show_view_expenses(self):
-        """Display all expenses in a scrollable view"""
-        if self.current_view == "view_expenses":
-            return
-        
+        if self.current_view == "view_expenses": return
         self.current_view = "view_expenses"
         self.clear_main_frame()
+        self.buttons["Transactions"].configure(fg_color=COLOR_PRIMARY, text_color="white")
 
-        # Title
-        title = ctk.CTkLabel(
-            self.main_frame, 
-            text="View Expenses", 
-            font=ctk.CTkFont(size=28, weight="bold")
-        )
-        title.pack(pady=(0, 20))
+        container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=30, pady=30)
 
-        # Filter Frame
-        filter_frame = ctk.CTkFrame(self.main_frame)
-        filter_frame.pack(padx=20, pady=10, fill="x")
-
-        ctk.CTkLabel(filter_frame, text="Filter by Category:").pack(side="left", padx=10)
+        # Header with Filter
+        header_frame = ctk.CTkFrame(container, fg_color="transparent")
+        header_frame.pack(fill="x", pady=(0, 20))
+        
+        ctk.CTkLabel(header_frame, text="Transaction History", font=self.font_header).pack(side="left")
         
         self.filter_var = ctk.StringVar(value="All")
         filter_menu = ctk.CTkOptionMenu(
-            filter_frame,
+            header_frame,
             values=["All", "Food", "Transport", "Bills", "Entertainment", "Shopping", "Health", "Misc"],
             variable=self.filter_var,
+            width=150,
             command=lambda x: self.refresh_expense_list()
         )
-        filter_menu.pack(side="left", padx=10)
+        filter_menu.pack(side="right")
+        ctk.CTkLabel(header_frame, text="Filter:", font=self.font_normal, text_color=COLOR_TEXT_SUB).pack(side="right", padx=10)
 
-        # Scrollable Frame for expenses
-        self.expenses_scroll_frame = ctk.CTkScrollableFrame(self.main_frame)
-        self.expenses_scroll_frame.pack(padx=20, pady=10, fill="both", expand=True)
+        # List Area
+        self.expenses_scroll_frame = ctk.CTkScrollableFrame(container, fg_color="transparent")
+        self.expenses_scroll_frame.pack(fill="both", expand=True)
 
         self.refresh_expense_list()
 
     def refresh_expense_list(self):
-        """Refresh the expense list based on current filter"""
-        # Clear existing items
-        for widget in self.expenses_scroll_frame.winfo_children():
-            widget.destroy()
+        for widget in self.expenses_scroll_frame.winfo_children(): widget.destroy()
 
         expenses = load_expenses()
-        filter_category = self.filter_var.get()
-
-        # Filter expenses
-        if filter_category != "All":
-            expenses = [e for e in expenses if e['category'] == filter_category]
-
-        # Sort by date (newest first)
+        filter_cat = self.filter_var.get()
+        if filter_cat != "All":
+            expenses = [e for e in expenses if e['category'] == filter_cat]
         expenses.sort(key=lambda x: x['date'], reverse=True)
 
         if not expenses:
-            ctk.CTkLabel(
-                self.expenses_scroll_frame, 
-                text="No expenses found",
-                font=ctk.CTkFont(size=16)
-            ).pack(pady=20)
+            ctk.CTkLabel(self.expenses_scroll_frame, text="No transactions found.", font=self.font_normal, text_color="gray").pack(pady=40)
             return
 
-        # Display expenses
-        for expense in expenses:
-            expense_frame = ctk.CTkFrame(self.expenses_scroll_frame, corner_radius=10)
-            expense_frame.pack(padx=10, pady=5, fill="x")
+        for exp in expenses:
+            self._create_expense_row(exp)
 
-            # Left side - Category and Description
-            left_frame = ctk.CTkFrame(expense_frame, fg_color="transparent")
-            left_frame.pack(side="left", fill="both", expand=True, padx=15, pady=10)
-
-            ctk.CTkLabel(
-                left_frame,
-                text=f"🏷️ {expense['category']}",
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w")
-
-            if expense.get('description'):
-                ctk.CTkLabel(
-                    left_frame,
-                    text=expense['description'],
-                    font=ctk.CTkFont(size=12),
-                    text_color="gray"
-                ).pack(anchor="w")
-
-            # Right side - Amount and Date
-            right_frame = ctk.CTkFrame(expense_frame, fg_color="transparent")
-            right_frame.pack(side="right", padx=15, pady=10)
-
-            ctk.CTkLabel(
-                right_frame,
-                text=f"${expense['amount']:.2f}",
-                font=ctk.CTkFont(size=16, weight="bold")
-            ).pack(anchor="e")
-
-            ctk.CTkLabel(
-                right_frame,
-                text=expense['date'],
-                font=ctk.CTkFont(size=12),
-                text_color="gray"
-            ).pack(anchor="e")
+    def _create_expense_row(self, expense):
+        row = ctk.CTkFrame(self.expenses_scroll_frame, fg_color=COLOR_CARD, corner_radius=10)
+        row.pack(fill="x", pady=5)
+        
+        # Icon/Category
+        ctk.CTkLabel(row, text="🏷️", font=ctk.CTkFont(size=20)).pack(side="left", padx=(15, 5), pady=15)
+        
+        info_frame = ctk.CTkFrame(row, fg_color="transparent")
+        info_frame.pack(side="left", padx=10)
+        
+        ctk.CTkLabel(info_frame, text=expense['category'], font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(info_frame, text=expense['date'], font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_SUB).pack(anchor="w")
+        
+        # Amount/Desc
+        amt_frame = ctk.CTkFrame(row, fg_color="transparent")
+        amt_frame.pack(side="right", padx=15)
+        
+        ctk.CTkLabel(amt_frame, text=f"-${expense['amount']:.2f}", font=ctk.CTkFont(size=16, weight="bold"), text_color="#ff6b6b").pack(anchor="e") # Red for expense
+        if expense.get('description'):
+             ctk.CTkLabel(amt_frame, text=expense['description'], font=ctk.CTkFont(size=12), text_color=COLOR_TEXT_SUB).pack(anchor="e")
 
     def export_data(self):
-        """Export expenses to CSV"""
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
-        )
-        
+        filename = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
         if filename:
-            if export_to_csv(filename):
-                messagebox.showinfo("Success", f"Data exported to {filename}")
-            else:
-                messagebox.showerror("Error", "Failed to export data")
+            if export_to_csv(filename): messagebox.showinfo("Success", f"Data exported to {filename}")
+            else: messagebox.showerror("Error", "Failed to export data")
 
 if __name__ == "__main__":
     app = ExpenseTrackerApp()
